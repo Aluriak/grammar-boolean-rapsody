@@ -14,15 +14,39 @@ Use a finite state machine (see generate_fsm() function) to parse the input,
  produce a syntactic tree from the lexical table, and then deduce a DAG,
  that is finally used for find the expected ouput.
 
-The API consist only in the generate_output(1) function.
+The API consist only in the compile_output(1) function.
 All other functions are used internally, or not used at all
  but conserved for science. (only postfix(1) function is in this last case)
 
-The generate_output(1) function is high-level and simple. You may want to
+The compile_output(1) function is high-level and simple. You may want to
  begin there if you want to read these code.
 
 PEP8 is completely busted at some point, but its mainly because of
  readability of big lines.
+
+Principles:
+- lexical analysis of the input string, given the lexems (id, operators, parenthesis)
+- generate the polish notation of the lexical table
+- syntactic tree construction
+- DAG creation from the syntactic tree
+- walks in the DAG for determine the outputed elements lists
+
+Idea is, mainly, that a DAG is simple to store (dict {node:successors}),
+ and represent well the input data.
+ The walks in the DAG is performed by the generate_output(1) function,
+ and simply consist of a DFS with generation of the whole path since the
+ root each time a leaf is hit.
+
+The algorithm for the syntactic tree to DAG is probably not what you want to have
+ in any real project. This algorithm was design and tested too quickly for being
+ efficient or secure.
+
+Limits:
+- no real error handling for parenthesis
+- source code can't begin with non defined start (ex: (a|b)&c is prohibited),
+while the creation of the DAG doesn't handle that case.
+- the DAG is probably not necessary, while the syntactic tree contains already
+all necessary information, well structured.
 
 """
 import re
@@ -148,7 +172,7 @@ def well_parenthesed(lextable):
     return parenthesis_count == 0
 
 
-def postfix(lextable):
+def postfix(lextable):  # UNUSED
     """Return the postfix representation of the given lexical table
 
 
@@ -268,7 +292,7 @@ def generate_syntree(pretable):
     return syntree
 
 
-def generate_dag(syntree):  # UNUSED
+def generate_dag(syntree):
     """Return a dict {node:{sons}} describing given syntactic tree as a DAG"""
     stack = []
     dag = {}  # {token:[tokens]}
