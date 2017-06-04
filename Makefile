@@ -1,5 +1,5 @@
-all:
-	python __main__.py
+gbr:
+	python gbr.py
 
 
 t: test
