@@ -283,8 +283,12 @@ def generate_syntree(pretable):
     return syntree
 
 
-def eval_tree(tree:dict, root:int=1) -> iter:
-    """Yield paths from input syntree, from given root"""
+def eval_tree(tree:dict, root:int=1, combine_or:bool=False) -> iter:
+    """Yield paths from input syntree, from given root.
+
+    combine_or -- if True, will also yield paths (a, b) from 'a|b'
+
+    """
     def parent(uid): return uid // 2
     def leftson(uid): return uid * 2
     def rightson(uid): return uid * 2 + 1
@@ -293,20 +297,23 @@ def eval_tree(tree:dict, root:int=1) -> iter:
     if root_type is Type.Letter:
         yield (root_value,)
     elif root_type is Type.Op:
-        if root_value == OP_AND:
+        if root_value == OP_AND or (combine_or and root_value == OP_OR):
             for begin_path in eval_tree(tree, leftson(root)):
                 for end_path in eval_tree(tree, rightson(root)):
                     yield begin_path + end_path
-        elif root_value == OP_OR:
+        if root_value == OP_OR:
             for begin_path in eval_tree(tree, leftson(root)):
                 yield begin_path
             for end_path in eval_tree(tree, rightson(root)):
                 yield end_path
 
 
-def compile_input(string):
+def compile_input(string, combine_or:bool=False):
     """Yields the possible combinations parsed from given string.
     See module docstring for more explanations.
+
+    combine_or -- if True, will also yield paths (a, b) from 'a|b'
+
     """
     # lexical + syntactic analysis
     lexical_table = tuple(lexical_analysis(string))
@@ -321,7 +328,7 @@ def compile_input(string):
     # print('SYNTACTIC TREE:', syntree)
 
     # generate all paths
-    yield from eval_tree(syntree)
+    yield from eval_tree(syntree, combine_or=bool(combine_or))
 
 
 

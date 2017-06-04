@@ -10,6 +10,8 @@ def test_parenthesis():
     assert tuple(gbr.compile_input('(a|b)')) == (('a',), ('b',))
     assert tuple(gbr.compile_input('(a&b&c)|(a&d&c)')) == (('a', 'b', 'c'), ('a', 'd', 'c'))
 
+def test_combine_or():
+    assert tuple(gbr.compile_input('(a|b)', combine_or=True)) == (('a', 'b'), ('a',), ('b',))
 
 def test_multiple_roots():
     assert tuple(gbr.compile_input('a|b')) == (('a',), ('b',))
