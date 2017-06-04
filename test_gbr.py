@@ -26,9 +26,9 @@ def test_complex_1():
 
 def test_complex_2():
     expecteds = (
-        ('a', 'jp', 'bc')
-        ('a', 'jp', 'cp')
-        ('b', 'jp', 'bc')
-        ('b', 'jp', 'cp')
+        ('a', 'jp', 'bc'),
+        ('a', 'jp', 'cp'),
+        ('b', 'jp', 'bc'),
+        ('b', 'jp', 'cp'),
     )
     assert tuple(gbr.compile_input('(a|b)&jp&(bc|cp)')) == expecteds
