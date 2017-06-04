@@ -352,20 +352,20 @@ def generate_output(dag):
     """Yield all possible walks in the given dag"""
     # get root
     internal_and_leaf = frozenset(son for sons in dag.values() for son in sons)
-    root = tuple(node for node in dag if node not in internal_and_leaf)
-    assert len(root) == 1
-    root = next(iter(root))
+    roots = tuple(node for node in dag if node not in internal_and_leaf)
 
     # exploration in deep
-    path = []
     def walk_on(cur_node, dag=dag, path=[]):
+        """Exploration in deep"""
+        path = path or []
         if cur_node in dag:  # if not a leaf
             for son in dag[cur_node]:
                 yield from walk_on(son, path=path+[cur_node])
         else:  # leaf case
             yield tuple(path + [cur_node])
 
-    return tuple(walk_on(root, dag=dag, path=[]))
+    for root in roots:
+        yield from (walk_on(root, dag=dag, path=[]))
 
 
 def compile_input(string):
