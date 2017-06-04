@@ -328,5 +328,5 @@ def compile_input(string):
 if __name__ == '__main__':
     string = 'a&b|c'  # operator priority
     # string = 'jp&a(bc|cp)'  # error
-    print('OUTPUT:\n\t', '\n\t '.join(str(_) for _ in compile_input(string)))
-
+    print('Solutions of expression', string, 'are:\n\t',
+          '\n\t '.join(str(_) for _ in compile_input(string)))
