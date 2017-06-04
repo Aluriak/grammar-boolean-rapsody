@@ -11,7 +11,7 @@ the resulting lists of elements:
     (a, c, e)
 
 Use a finite state machine (see generate_fsm() function) to parse the input,
- produce a syntactic tree from the lexical table, and then deduce a DAG,
+ produce a syntactic tree from the lexical table,
  that is finally used for find the expected ouput.
 
 The API consist only in the compile_output(1) function.
@@ -28,25 +28,16 @@ Principles:
 - lexical analysis of the input string, given the lexems (id, operators, parenthesis)
 - generate the polish notation of the lexical table
 - syntactic tree construction
-- DAG creation from the syntactic tree
-- walks in the DAG for determine the outputed elements lists
+- walks in the syntactic tree to determine the possible paths to leafs
 
-Idea is, mainly, that a DAG is simple to store (dict {node:successors}),
+Idea is, mainly, that a syntree is simple to store (dict {node:successors}),
  and represent well the input data.
- The walks in the DAG is performed by the generate_output(1) function,
- and simply consist of a DFS with generation of the whole path since the
- root each time a leaf is hit.
+ The walks is performed by the eval_tree function,
+ and simply consist of a recursive DFS with generation of the
+ whole path since the root each time a leaf is hit.
+ Behavior of AND and OR operators are hardcoded.
 
-The algorithm for the syntactic tree to DAG is probably not what you want to have
- in any real project. This algorithm was design and tested too quickly for being
- efficient or secure.
-
-Limits:
-- no real error handling for parenthesis
-- source code can't begin with non defined start (ex: (a|b)&c is prohibited),
-while the creation of the DAG doesn't handle that case.
-- the DAG is probably not necessary, while the syntactic tree contains already
-all necessary information, well structured.
+Note that there is no real error handling for parenthesis.
 
 """
 import re
@@ -292,80 +283,25 @@ def generate_syntree(pretable):
     return syntree
 
 
-def generate_dag(syntree):
-    """Return a dict {node:{sons}} describing given syntactic tree as a DAG"""
-    stack = []
-    dag = {}  # {token:[tokens]}
+def eval_tree(tree:dict, root:int=1) -> iter:
+    """Yield paths from input syntree, from given root"""
     def parent(uid): return uid // 2
     def leftson(uid): return uid * 2
     def rightson(uid): return uid * 2 + 1
 
-    def leafs(node_value, dag=dag):
-        """Return all leafs of the given node in the dag"""
-        assert node_value in dag
-        ret = []
-        if len(dag[node_value]):
-            for son in dag[node_value]:
-                ret.extend(leafs(son, dag))
-            return ret
-        else:  # node is a leaf
-            return [node_value]
-
-    # d = {'a': ('b', 'c'), 'c':'o', 'b': {}, 'o':{}}
-    # print(d)
-    # print(leafs('a', dag=d))
-    # exit()
-
-
-    def uid_to_node_value(uid):
-        return syntree[uid][1]
-
-    def walk_on(node, dag=dag):
-        if node not in syntree: return None
-        token = syntree[node]
-        type, value = token
-        if type is Type.Letter:  # all letters must appears in the dag
-            dag[value] = tuple()
-        right = walk_on(rightson(node))
-        left = walk_on(leftson(node))
-        # print('\nLOOP:', node, left, right, value == OP_OR)
-
-        if left and right:
-            assert type is Type.Op
-            if value == OP_OR:
-                return tuple(left + right)
-            else:
-                assert value == OP_AND
-                for lson in left:
-                    for leaf in leafs(lson):
-                        dag[leaf] = right
-                return left
-
-        return tuple([value])
-
-    assert 1 in syntree
-    walk_on(1, dag=dag)
-    return {k: v for k, v in dag.items() if len(v)}  # filter out leaves
-
-
-def generate_output(dag):
-    """Yield all possible walks in the given dag"""
-    # get root
-    internal_and_leaf = frozenset(son for sons in dag.values() for son in sons)
-    roots = tuple(node for node in dag if node not in internal_and_leaf)
-
-    # exploration in deep
-    def walk_on(cur_node, dag=dag, path=[]):
-        """Exploration in deep"""
-        path = path or []
-        if cur_node in dag:  # if not a leaf
-            for son in dag[cur_node]:
-                yield from walk_on(son, path=path+[cur_node])
-        else:  # leaf case
-            yield tuple(path + [cur_node])
-
-    for root in roots:
-        yield from (walk_on(root, dag=dag, path=[]))
+    root_type, root_value = tree[root]
+    if root_type is Type.Letter:
+        yield (root_value,)
+    elif root_type is Type.Op:
+        if root_value == OP_AND:
+            for begin_path in eval_tree(tree, leftson(root)):
+                for end_path in eval_tree(tree, rightson(root)):
+                    yield begin_path + end_path
+        elif root_value == OP_OR:
+            for begin_path in eval_tree(tree, leftson(root)):
+                yield begin_path
+            for end_path in eval_tree(tree, rightson(root)):
+                yield end_path
 
 
 def compile_input(string):
@@ -374,36 +310,23 @@ def compile_input(string):
     """
     # lexical + syntactic analysis
     lexical_table = tuple(lexical_analysis(string))
-    # print('STRING:', string)
-    # print('LEXICAL TABLE:', lexical_table)
     assert well_parenthesed(lexical_table)
 
     # get prefix representation
     pretable = tuple(prefix(lexical_table))
     # print('PREFIX:', pretable)
 
-    # get postfix representation  # UNUSED
-    # postable = tuple(postfix(lexical_table))
-    # print('POSTFIX:', postable)
-
     # generate the syntactic tree representation
     syntree = generate_syntree(pretable)
     # print('SYNTACTIC TREE:', syntree)
 
-    # generate the DAG representation
-    dag = generate_dag(syntree)
-    # print('DAG:', dag)
-
-    # generate Output strings
-    yield from generate_output(dag)
+    # generate all paths
+    yield from eval_tree(syntree)
 
 
 
 if __name__ == '__main__':
-    string = 'a&(b|(c&o))&(d|e)'
-    # string = '(a|b)&jp&(bc|cp)'  # exception : dag treatment fails with a non fixed beginning
-    # string = 'jp&(bc|cp)'
+    string = 'a&b|c'  # operator priority
     # string = 'jp&a(bc|cp)'  # error
-    # string = 'a&b|c'  # operator priority
     print('OUTPUT:\n\t', '\n\t '.join(str(_) for _ in compile_input(string)))
 
