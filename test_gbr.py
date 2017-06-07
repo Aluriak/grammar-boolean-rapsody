@@ -5,6 +5,10 @@ import gbr
 def test_basics():
     assert tuple(gbr.compile_input('aa&bb|cc')) == (('aa', 'bb'), ('aa', 'cc'))
 
+def test_special_id():
+    expr = '(049&(02.50|02:50))'
+    expected = (('049', '02.50'), ('049', '02:50'))
+    assert tuple(gbr.compile_input(expr)) == expected
 
 def test_parenthesis():
     assert tuple(gbr.compile_input('(a|b)')) == (('a',), ('b',))

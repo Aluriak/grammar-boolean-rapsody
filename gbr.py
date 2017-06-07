@@ -64,7 +64,7 @@ def precedence(op1, op2):
 
 
 class Type(Enum):
-    Letter  = '[a-zA-Z0-9_]'
+    Letter  = '[a-zA-Z0-9_\.:]'
     Op      = '[' + OP_AND + OP_OR + ']'
     Opening = '\('
     Closing = '\)'
